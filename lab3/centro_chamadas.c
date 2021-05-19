@@ -51,9 +51,7 @@ int main(int argc, char const *argv[]) {
     }
 
 	/************************************************************************************************************/
-    int sensib_lambda_min = 0, sensib_lambda_max = 0, sensib_lambda_salto = 0, sensib_tam = 0, sensib_lambda_aux = 0, sensib_pos = 0;
-	int* sensib_lambda = NULL;
-	double* sensib_atraso = NULL;
+    int sensib_lambda_min = 0, sensib_lambda_max = 0, sensib_lambda_salto = 0, sensib_lambda_aux = 0;
 
 	printf("\n\n\tVALORES SENSIBILIDADE LAMBDA \n");
 	do {
@@ -68,18 +66,14 @@ int main(int argc, char const *argv[]) {
 
 	if( sensib_lambda_min == sensib_lambda_max ){
 		sensib_lambda_salto = 1;
-		sensib_tam = 0;
 	}
 	else {
 		do {
 		printf("\tvalor dos saltos entre extremos de lambda: ");
 		scanf("%d", &sensib_lambda_salto);
 		} while (sensib_lambda_salto <= 0);
-		sensib_tam = (sensib_lambda_max - sensib_lambda_min) / (float)sensib_lambda_salto;
 	}
 
-	sensib_lambda = (int*)calloc(sensib_tam + 1, sizeof(int));
-	sensib_atraso = (double*)calloc(sensib_tam + 1, sizeof(double));
 	
 	/************************************************************************************************************/
 
@@ -98,6 +92,8 @@ int main(int argc, char const *argv[]) {
 	if( f2raw == NULL ){ printf("Erro a abrir o ficheiro prev_raw\n"); return -1; }
 	FILE *f3 = fopen("prev_neg.txt","wb");
 	if( f3 == NULL ){ printf("Erro a abrir o ficheiro prev_neg\n"); return -1; }
+	FILE *sens = fopen("sensibilidade.txt", "wb");
+	if( sens == NULL ){ printf("Erro a abrir o ficheiro sensibilidade\n"); return -1; }
 	
 	
 	for (sensib_lambda_aux = sensib_lambda_min; sensib_lambda_aux <= sensib_lambda_max; sensib_lambda_aux += sensib_lambda_salto) {
@@ -115,7 +111,6 @@ int main(int argc, char const *argv[]) {
 		lista  *especifico = NULL;
 		lista  *fespera_especifico = NULL;
 
-		sensib_lambda[sensib_pos] = sensib_lambda_aux;
 
 		//PRINTS INICIAIS NOS FICHEIROS
 		exportacao_aux(f1raw, 0 , sensib_lambda_aux , 0);
@@ -286,14 +281,12 @@ int main(int argc, char const *argv[]) {
 			geral = remover(geral);
 		}
 		
-		//VETOR SENSIBILIDADE
-	  	sensib_atraso[sensib_pos] = tempo_medio_de_cham_espcf_em_filas;
-    	sensib_pos++;
-
+	
 		//EXPORTACAO
 		exportacao_hist(f1 , hist_atraso , hist_tam , delta,1);
 		exportacao_hist(f2 , hist_prev_pos , hist_tam , delta,1);
 		exportacao_hist(f3 , hist_prev_neg , hist_tam , delta,-1);
+		
 
 		//DEBBUG
 		printf("erro_cont : %d || chamadas geral atrasadas : % d  || hist_conta_atrasos : %d \n" , erro_cont , chamadas_geral_atrasadas , histograma_conta(hist_atraso) );
@@ -331,6 +324,9 @@ int main(int argc, char const *argv[]) {
 
 		/*******************************************************************************************************************/		
 		
+		//SENSIBILIDADE
+		exportacao_aux(sens , (double)tempo_medio_de_cham_espcf_em_filas , sensib_lambda_aux ,3);
+
 		//LIBERTAÇAO DE MEMORIA
 		rem_vetor(&Vetor_atrasos);
 		free(fespera_geral);
@@ -341,17 +337,13 @@ int main(int argc, char const *argv[]) {
 		free(hist_prev_neg);
 		free(hist_prev_pos);
 	}
-
-	//EXPORTACAO RESULTADOS DE SENSIBILIDADE
-	if( exportacao_sensib( sensib_atraso , sensib_lambda , sensib_tam) == -1 ) return -1;
 	
 	fclose(f1);
 	fclose(f2);
 	fclose(f3);
 	fclose(f1raw);
 	fclose(f2raw);
-	free(sensib_lambda);
-	free(sensib_atraso);
+	fclose(sens);
 	
     return 1;
 }

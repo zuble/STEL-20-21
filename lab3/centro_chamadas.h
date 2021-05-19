@@ -254,22 +254,12 @@ void exportacao_aux(FILE *f1, double data , int lambdaa , int aux ){
 		fprintf(f1 , "%lf\n" , data);
 	}
 
-}
-
-int exportacao_sensib( double * sens_atrasa , int * sens_lamba , int sens_atrasa_tam){
-	
-	FILE *sens = fopen("sensibilidade.txt", "wb");
-	if(sens == NULL) {
-		printf("Erro a abrir o ficheiro sensibilidade\n");
-		return -1;
+	if( aux == 3 ){ //print sensibilidade
+		fprintf(f1 , "%d, %lf\n" , lambdaa , (double)data);
 	}
-	fprintf(sens, "Lambda, Atraso total chamadas espcf [b] \n");
-	for (int k = 0; k <= sens_atrasa_tam; k++) 
-		fprintf(sens, "%d, %lf\n", sens_lamba[k], sens_atrasa[k]);
-
-	fclose(sens);	
 
 }
+
 
 /* double delta_max = 5 * (double)1/((double)(sensib_lambda_aux/3600));
 int hist_tam = (int)(delta_max/delta); // hist_tam = 25 para lambda = 80 c/h */
