@@ -1,15 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define	lambda 0.022f
 #define	dm 120.0f
 #define	CHEGADA 0
 #define	PARTIDA 1
 #define	ESPECIFICO 0
 #define	GERAL 1
 //valores relativos á distr gaussiana da duracao duma chamada especifica até ser atendida por um operador espcf
-#define st_desv 20
-#define mean 60
+#define stdrt_dev_gauss 20
+#define media_gauss 60
 
 #ifndef M_PI
 #define M_PI (3.14159265358979323846264338327950288)
@@ -30,7 +29,6 @@ typedef struct{
 	double tempo;
 	struct lista * proximo;
 } lista;
-
 
 // Função que remove o primeiro elemento da lista
 lista * remover (lista * apontador){
@@ -106,20 +104,20 @@ void imprimir (lista * apontador){
 }
 
 // /*return random number between zero and one */
-double generate_random() {
+double criacao_random() {
 	return ((double) rand()+1)/RAND_MAX;
 }
 
 // /*returns time between calls*/
-double time_between_calls(){
-	double u = generate_random(), r;
-	return r = -(1/lambda)*log(u);
+double tempo_entre_chamadas(double lambda){
+	double u = criacao_random(), r;
+	return 	r = -(1/lambda)*log(u);
 }
 
 // /*returns if a call is general or general+specific*/
-int get_call_area(){
+int area(){
 
-	double p = generate_random();
+	double p = criacao_random();
 	int x;
 	if (p <= 0.3) x = GERAL;
 	else x = ESPECIFICO;
@@ -127,16 +125,16 @@ int get_call_area(){
 }
 
 // returns duration of the call in the area specific chhannel*/
-double duration_of_call_general(int area){
+double duracao_chamada_geral(int area){
 	double r;
 
 	if( area == GERAL ){
 		//exponential avg 120, min 60 and max 300
-		double u =generate_random();
+		double u = criacao_random();
 		r =(double) 60 -dm*log(u);
 	
 		if( r > (double) 300) r = (double) 300;
-
+		
 	} 
 	if( area == ESPECIFICO ){
 		//gaus avg 60, std 20, min 30, max 120
@@ -144,11 +142,11 @@ double duration_of_call_general(int area){
 		double teta;
 
 		do{
-			u2=generate_random();
-			u=generate_random();
+			u2=criacao_random();
+			u=criacao_random();
 			teta = 2*M_PI*u;
 			r = (sqrt(-2*log(u2))*cos(teta));
-			r = ((r*st_desv) + mean);
+			r = ((r*stdrt_dev_gauss) + media_gauss);
 		}while( r < 30 );
 
 		if( r > (double) 120) r = (double) 120;
@@ -159,11 +157,11 @@ double duration_of_call_general(int area){
 }
 
 // /*returns duration of the call in the area specific chhannel*/
-double duration_of_call_specific(){
+double duracao_chamada_espcf(){
 	double u , r, d = 150.0;
 
 	do{
-		u = generate_random();
+		u = criacao_random();
 		r = -d * log(u);
 	}while( r < 60);
 
@@ -171,11 +169,11 @@ double duration_of_call_specific(){
 }
 
 // /*returns running media delay*/
-double running_average(int n, double current_sample, double previous_avg){
-		return (previous_avg*(n-1) + current_sample)/n;
+double running_average(int n, double atraso_atual, double avg_anterior){
+		return (avg_anterior*(n-1) + atraso_atual)/n;
 }
 
-double media(double* data, int n){
+double calc_media(double* data, int n){
     int i;
     double s = 0;
 
@@ -184,7 +182,7 @@ double media(double* data, int n){
     return s / n;
 }
 
-double stddev(double* data, int n, double media){
+double calc_desvio_standard(double* data, int n, double media){
     int i;
     double s = 0;
 
@@ -214,35 +212,64 @@ void rem_vetor(Vetor *v) {
   v->capacidade = 0;
 }
 
-/*
-int exportacao_CSV(int *histograma , int type){
-	FILE* f1;
+int *histograma_insere(double data, int size, int * histogram, double delta){
 
-	if( type == 0 ){
-		f1 = fopen("atraso.csv","w+");
-
-		if(f1 == NULL) 
-			printf("Erro a abrir o ficheiro\n");
-		else
-			fprintf(stdout, "\n\tA exportar para atraso.csv");
+	
+	for(int z = 0; z < size; z++){
+		if(z == 24 && data >= (z+1)*delta)
+			histogram[z]++;
+		else if(data >= z*delta && data < (z+1)*delta) {
+			histogram[z]++;
+		}
 		
 	}
-  	else {
-		f1 = fopen("previsao.csv","w+");  
+	
+	return histogram;
+}
 
-		if(f1 == NULL) 
-			printf("Erro a abrir o ficheiro\n");
-		else
-			fprintf(stdout, "\n\tA exportar para previsao.csv");
+int histograma_conta( int * h){
+	int u = 0;
+	for(int z = 0; z < 25; z++){
+		u += h[z];
+	}
+	return u;
+}
+
+void exportacao_hist (FILE *f1 , int *histogram , int tam , double delta , int h ){
+	if( h == -1 ) delta = -delta;
+
+	for (int i=0; i < tam; i++){
+		fprintf(f1, "%d, %lf, %d\n", i, i*delta , histogram[i]);
+	}
+}
+
+void exportacao_aux(FILE *f1, double data , int lambdaa , int aux ){
+
+	if( aux == 0 ){ // print inical dos histogramas para f1/f2/f3
+		fprintf(f1 , "*********************\n");
+		fprintf(f1 , "LAMBDA : %d\n" , lambdaa);
 	}
 
-	for (int i = 0; i < sizeof(histograma); i++)
-      	fprintf(f1, "%d , %d\n", i, histograma[i]);
-    
-	fprintf(stdout, "\n\t\tFIM\n");
-}
-*/
+	if( aux == 2 ){ // print dos valores para f1raw/f2raw
+		fprintf(f1 , "%lf\n" , data);
+	}
 
-void exportacao_TXT(FILE *f1, double data){
-    fprintf(f1 , "%lf\n" , data);
 }
+
+int exportacao_sensib( double * sens_atrasa , int * sens_lamba , int sens_atrasa_tam){
+	
+	FILE *sens = fopen("sensibilidade.txt", "wb");
+	if(sens == NULL) {
+		printf("Erro a abrir o ficheiro sensibilidade\n");
+		return -1;
+	}
+	fprintf(sens, "Lambda, Atraso total chamadas espcf [b] \n");
+	for (int k = 0; k <= sens_atrasa_tam; k++) 
+		fprintf(sens, "%d, %lf\n", sens_lamba[k], sens_atrasa[k]);
+
+	fclose(sens);	
+
+}
+
+/* double delta_max = 5 * (double)1/((double)(sensib_lambda_aux/3600));
+int hist_tam = (int)(delta_max/delta); // hist_tam = 25 para lambda = 80 c/h */
